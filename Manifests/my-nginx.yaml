@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-nginx
+spec:
+  selector:
+    matchLabels:
+      run: my-nginx
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        run: my-nginx
+    spec:
+      containers:
+      - name: my-nginx
+        image: nginx
+        ports:
+        - containerPort: 80
+          name: http
+        #
+        # There isn't anything listeing on 443; included just as an example
+        #
+        - containerPort: 443
+          name: https
+        #
+        # This will change the page nginx serves to show container's hostname
+        #
+        command: ["/bin/bash"]
+        args: ["-c", "printenv HOSTNAME > /usr/share/nginx/html/index.html && nginx -g \"daemon off;\""]
+      #
+      # This Anti-Affinity rule will prevent K8s from scheduing
+      # more than pod on the same node, so that we can provide
+      # proper session persistence and pod health checking.
+      #
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: run
+                operator: In
+                values:
+                - my-nginx
+            topologyKey: "kubernetes.io/hostname"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-nginx-service
+  labels:
+    run: my-nginx-svc
+spec:
+  # Prevent this Service from sending traffic to other nodes
+  # Note: this is broken in Heptio's K8s as of 8 May 2018
+  # See: https://github.com/heptio/aws-quickstart/issues/173
+  #
+  externalTrafficPolicy: Local
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: http
+    name: http
+#  - port: 443
+#    protocol: TCP
+#    targetPort: https
+#    name: https
+  selector:
+    run: my-nginx
+  type: NodePort
