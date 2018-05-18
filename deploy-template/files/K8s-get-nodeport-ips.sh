@@ -49,6 +49,7 @@ if [[ ! ${ZEUSHOME} && ${ZEUSHOME-_} ]]; then
     export ZEUSHOME="/usr/local/zeus"   # Docker image default
 fi
 
+configSync="${ZEUSHOME}/zxtm/bin/replicate-config"
 workDir="${ZEUSHOME}/zxtm/internal/servicediscovery"
 extrasDir="${ZEUSHOME}/zxtm/conf/extra"
 
@@ -174,6 +175,7 @@ printOut() {
 # Check prerequisites
 #
 checkPrerequisites () {
+    replicationNeeded="0"
     # Check for curl
     #
     which curl > /dev/null
@@ -212,6 +214,7 @@ checkPrerequisites () {
         fi
         rm -f jq-linux64
         cd - > /dev/null 2>&1
+        replicationNeeded="1"
     fi
     which jq > /dev/null
     if [[ $? != 0 ]]; then
@@ -236,6 +239,7 @@ checkPrerequisites () {
         fi
         rm -f kubectl
         cd - > /dev/null 2>&1
+        replicationNeeded="1"
     fi
     which kubectl > /dev/null
     if [[ $? != 0 ]]; then
@@ -252,6 +256,9 @@ checkPrerequisites () {
     if [[ ! -s "${kubeConfig}" ]]; then
         echo "{\"version\":1, \"code\":400, \"error\":\"Specified kubeconfig file is empty of missing: ${kubeConfig}\"}"
         exit 1
+    fi
+    if [[ "${replicationNeeded}" == "1" ]]; then
+        $configSync > /dev/null 2>&1
     fi
 }
 

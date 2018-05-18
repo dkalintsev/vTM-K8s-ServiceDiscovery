@@ -40,6 +40,7 @@ resource "vtm_servicediscovery" "k8s-plugin" {
   content = "${file("${path.module}/files/K8s-get-nodeport-ips.sh")}"
 }
 
+# Pool automatically populated by K8s Service Discovery
 resource "vtm_pool" "k8s_nodes" {
   name                          = "${local.uniq_id}_k8s-nodes"
   monitors                      = ["Ping"]
@@ -47,4 +48,15 @@ resource "vtm_pool" "k8s_nodes" {
   service_discovery_interval    = "15"
   service_discovery_plugin      = "${vtm_servicediscovery.k8s-plugin.name}"
   service_discovery_plugin_args = "-s ${var.k8s-service-name} -c ${vtm_extra_file.kubeconf.name} -g"
+}
+
+# The Virtual Server
+#
+resource "vtm_virtual_server" "vs1" {
+  name          = "${local.uniq_id}_VS1"
+  enabled       = "true"
+  listen_on_any = "true"
+  pool          = "${vtm_pool.k8s_nodes.name}"
+  port          = "80"
+  protocol      = "http"
 }
