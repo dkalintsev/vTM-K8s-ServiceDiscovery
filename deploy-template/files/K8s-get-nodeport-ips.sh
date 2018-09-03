@@ -359,7 +359,7 @@ getNodes() {
         printOut
         exit
     fi
-    kubectl get pods ${podList[@]} -o json > ${outFile} 2>${errFile}
+    kubectl get pods --namespace="${nameSpace}" ${podList[@]} -o json > ${outFile} 2>${errFile}
     kubeError="$?"
     if [[ "${kubeError}" != "0" ]]; then
         outCode="500"
